@@ -306,6 +306,7 @@ print_completion() {
     echo "  Pre-loaded dashboards:"
     echo "    - Proxmox VE (10347): cluster overview, VM status, storage"
     echo "    - Node Exporter Full (1860): CPU, RAM, disk per node"
+    echo "    - Disk Wearout (SMART): NVMe/SSD wear level, spare, health"
     echo ""
     echo "── Next: Install Node Exporter + SMART wearout monitoring on each Proxmox node ──"
     echo ""
