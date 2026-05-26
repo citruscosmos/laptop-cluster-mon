@@ -58,28 +58,19 @@ Default Grafana login: `admin` / `admin` (change via `GRAFANA_ADMIN_PASSWORD`).
 
 ## Node Exporter Installation
 
-For full hardware metrics per Proxmox node, install Node Exporter on each Proxmox host:
+Run `node_setup.sh` on each Proxmox host. It installs node_exporter, smartmontools, nvme-cli, SMART disk monitoring via cron, and starts everything as a systemd service.
+
+Since Proxmox nodes don't have git, download both files first:
 
 ```bash
 # On each Proxmox node:
-curl -sL https://github.com/prometheus/node_exporter/releases/download/v1.9.1/node_exporter-1.9.1.linux-amd64.tar.gz | sudo tar xz -C /usr/local/bin --strip-components=1
-sudo useradd -rs /bin/false node_exporter 2>/dev/null || true
-sudo tee /etc/systemd/system/node_exporter.service <<'EOF'
-[Unit]
-Description=Node Exporter
-After=network.target
-
-[Service]
-User=node_exporter
-ExecStart=/usr/local/bin/node_exporter
-
-[Install]
-WantedBy=multi-user.target
-EOF
-sudo systemctl daemon-reload && sudo systemctl enable --now node_exporter
+curl -sLO https://raw.githubusercontent.com/citruscosmos/laptop-cluster-mon/main/scripts/node_setup.sh
+curl -sLO https://raw.githubusercontent.com/citruscosmos/laptop-cluster-mon/main/scripts/smartmon.sh
+chmod +x node_setup.sh smartmon.sh
+sudo ./node_setup.sh
 ```
 
-After installation, open port 9100 so the monitoring VM can reach it.
+After installation, ensure port 9100 is open so the monitoring VM can reach it.
 
 ## Architecture
 
