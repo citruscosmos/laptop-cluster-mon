@@ -1,0 +1,40 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.11.1
+    container_name: prometheus
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:13.0.1
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:v3.9.0
+    container_name: pve-exporter
+    restart: unless-stopped
+    ports:
+      - '9221:9221'
+    volumes:
+      - ./pve.yml:/etc/prometheus/pve.yml:ro
+
+volumes:
+  prometheus_data:
+  grafana_data:

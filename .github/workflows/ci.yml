@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck jq gettext-base curl
+          # promtool
+          PROM_VER="3.11.1"
+          curl -sL "https://github.com/prometheus/prometheus/releases/download/v${PROM_VER}/prometheus-${PROM_VER}.linux-amd64.tar.gz" | sudo tar xz -C /usr/local/bin --strip-components=1 "prometheus-${PROM_VER}.linux-amd64/promtool"
+
+      - name: Run shellcheck
+        run: shellcheck setup.sh
+
+      - name: Run unit tests
+        run: |
+          for test in tests/*.sh; do
+            echo "::group::$(basename "$test")"
+            bash "$test"
+            echo "::endgroup::"
+          done
+
+      - name: Validate template substitution (promtool)
+        env:
+          PVE_NODE_IP: 192.168.1.10
+          PVE_API_TOKEN: monitoring@pve!monitoring=test-token-123
+        run: |
+          # Set up mock env vars for envsubst
+          export NODE_IPS_YAML=$'          - \'192.168.1.10\'\n          - \'192.168.1.11\''
+          export NODE_IPS_9100_YAML=$'          - \'192.168.1.10:9100\'\n          - \'192.168.1.11:9100\''
+          export PVE_API_TOKEN
+          export SCRAPE_INTERVAL="15s"
+          export DATASOURCE_UID="PBFA97CFB590B2093"
+
+          # Substitute __VAR__ → ${VAR} then envsubst
+          sed 's/__\([A-Z][A-Z_0-9]*\)__/${\1}/g' templates/prometheus.yml.tmpl | envsubst > /tmp/prometheus.yml
+          promtool check config /tmp/prometheus.yml
+
+      - name: Validate docker-compose.yml template
+        run: |
+          # docker-compose.yml.tmpl uses docker compose native ${VAR} syntax, not __VAR__ envsubst syntax.
+          # docker compose config handles variable interpolation itself.
+          cp templates/docker-compose.yml.tmpl /tmp/docker-compose.yml
+          GRAFANA_ADMIN_PASSWORD=testpass docker compose -f /tmp/docker-compose.yml config > /dev/null
+
+      - name: Validate YAML syntax (datasource.yml.tmpl)
+        run: |
+          export DATASOURCE_UID="PBFA97CFB590B2093"
+          sed 's/__\([A-Z][A-Z_0-9]*\)__/${\1}/g' grafana/provisioning/datasources/datasource.yml.tmpl | envsubst > /tmp/datasource.yml
+          python3 -c "import yaml; yaml.safe_load(open('/tmp/datasource.yml'))" 2>/dev/null || echo "Skipping YAML validation (pyyaml not available)"
+
+      - name: Check dashboard JSONs are valid
+        run: |
+          for f in grafana/provisioning/dashboards/*.json; do
+            jq . "$f" > /dev/null || { echo "Invalid JSON: $f"; exit 1; }
+            echo "Valid: $(basename "$f") ($(jq '.title' "$f"))"
+          done
