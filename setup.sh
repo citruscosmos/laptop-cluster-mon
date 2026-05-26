@@ -200,8 +200,8 @@ generate_configs() {
     NODE_IPS_YAML=""
     NODE_IPS_9100_YAML=""
     for ip in "${NODE_IPS[@]}"; do
-        NODE_IPS_YAML="${NODE_IPS_YAML}          - '${ip}'\n"
-        NODE_IPS_9100_YAML="${NODE_IPS_9100_YAML}          - '${ip}:9100'\n"
+        NODE_IPS_YAML="${NODE_IPS_YAML}          - '${ip}'"$'\n'
+        NODE_IPS_9100_YAML="${NODE_IPS_9100_YAML}          - '${ip}:9100'"$'\n'
     done
     export NODE_IPS_YAML
     export NODE_IPS_9100_YAML
