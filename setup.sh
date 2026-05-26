@@ -187,6 +187,15 @@ discover_cluster_nodes() {
 generate_configs() {
     info "Generating configuration files..."
 
+    # Extract token secret from full PVE_API_TOKEN (format: user@realm!token_name=secret)
+    PVE_TOKEN_VALUE="${PVE_API_TOKEN##*=}"
+    if [ -z "$PVE_TOKEN_VALUE" ] || [ "$PVE_TOKEN_VALUE" = "$PVE_API_TOKEN" ]; then
+        warn "Could not parse token secret from PVE_API_TOKEN."
+        warn "Expected format: user@realm!token_name=secret"
+        warn "Falling back to full token string, but pve-exporter may fail to authenticate."
+        PVE_TOKEN_VALUE="$PVE_API_TOKEN"
+    fi
+
     # Build YAML-formatted IP lists for Prometheus targets
     NODE_IPS_YAML=""
     NODE_IPS_9100_YAML=""
@@ -196,7 +205,8 @@ generate_configs() {
     done
     export NODE_IPS_YAML
     export NODE_IPS_9100_YAML
-    export PVE_API_TOKEN
+    export PVE_TOKEN_VALUE
+    export PVE_FIRST_NODE_IP="${NODE_IPS[0]}"
     export SCRAPE_INTERVAL="${PROMETHEUS_SCRAPE_INTERVAL:-15s}"
     export DATASOURCE_UID="PBFA97CFB590B2093"
 

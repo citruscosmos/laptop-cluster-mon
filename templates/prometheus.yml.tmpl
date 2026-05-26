@@ -10,6 +10,7 @@ scrape_configs:
       module: [default]
       cluster: ['1']
       node: ['0']
+      target: ['__PVE_FIRST_NODE_IP__']
     static_configs:
       - targets: ['localhost:9221']
 
