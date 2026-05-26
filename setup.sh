@@ -233,6 +233,18 @@ setup_grafana_dashboards() {
     # Dashboard JSONs are already in grafana/provisioning/dashboards/ from the repo.
     # The docker-compose.yml mounts ./grafana/provisioning to /etc/grafana/provisioning.
     # No additional copy step needed.
+
+    # Fix imported dashboards that still use DS_PROMETHEUS template variable.
+    # Provisioning loads files directly, so ${DS_PROMETHEUS} is never resolved.
+    # Replace it with the actual datasource UID set above.
+    local json
+    for json in grafana/provisioning/dashboards/*.json; do
+        if grep -q 'DS_PROMETHEUS' "$json" 2>/dev/null; then
+            sed -i "s/\${DS_PROMETHEUS}/${DATASOURCE_UID}/g" "$json"
+            info "Fixed DS_PROMETHEUS references in $(basename "$json")"
+        fi
+    done
+
     local count
     count=$(find grafana/provisioning/dashboards -name '*.json' -type f 2>/dev/null | wc -l)
     info "Found ${count} dashboard JSON(s) ready for provisioning."
